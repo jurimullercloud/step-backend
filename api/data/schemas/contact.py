@@ -10,3 +10,6 @@ class ContactSchema(Schema):
 class UpdateContactSchema(Schema):
     name    = fields.Str(default = None)
     phone   = fields.Int(default = None)
+
+class DeleteContactSchema(Schema):
+    user_ids = fields.List(fields.Int)
