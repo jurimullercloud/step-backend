@@ -10,5 +10,5 @@ class AuthUserSchema(Schema):
     
 
 class UpdateUserSchema(Schema):
-    username = fields.String(default=None)
-    password = fields.String(default=None)
+    username = fields.String(missing=None)
+    password = fields.String(missing=None)

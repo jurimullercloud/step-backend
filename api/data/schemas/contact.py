@@ -8,8 +8,8 @@ class ContactSchema(Schema):
     phone   = fields.Int(required = True, error_messages = {"required": "phone is a required field"})
 
 class UpdateContactSchema(Schema):
-    name    = fields.Str(default = None)
-    phone   = fields.Int(default = None)
+    name    = fields.Str(missing=None)
+    phone   = fields.Int(missing=None)
 
 class DeleteContactSchema(Schema):
     user_ids = fields.List(fields.Int)
