@@ -10,6 +10,7 @@ from api.controllers.utils import process_user_update
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+
 @app.route("/api/v1/users", methods=["GET"])
 @auth_with_jwt
 def get_all_users():
@@ -20,6 +21,7 @@ def get_all_users():
     except Exception as ex:
         logging.exception(ex)
         return jsonify({"message": "Server crashed"}), 500
+
 
 @app.route("/api/v1/users/<int:user_id>", methods=["GET"])
 @auth_with_jwt
@@ -32,6 +34,7 @@ def get_user(user_id):
         logging.exception(ex)
         return jsonify({"message": "Server crashed"}), 500
 
+
 @app.route("/api/v1/users/<int:user_id>", methods=["PUT"])
 @auth_with_jwt
 def update_user(user_id):
@@ -40,19 +43,20 @@ def update_user(user_id):
 
         if not user:
             return jsonify({"message": "User not found"}), 404
-        
+
         body = request.get_json()
         if not body:
             return jsonify({"message": "Found empty request body"}), 401
 
         schema: Dict = UpdateUserSchema().load(body)
-        user = process_user_update(schema, user) 
+        user = process_user_update(schema, user)
         db.session.commit()
 
         return UserSchema().dump(user)
     except Exception as ex:
-        logging.exception(ex) 
-        return  {"message": "Server crashed"}, 500
+        logging.exception(ex)
+        return {"message": "Server crashed"}, 500
+
 
 @app.route("/api/v1/users/<int:user_id>", methods=["DELETE"])
 @auth_with_jwt
@@ -63,17 +67,17 @@ def delete_user(user_id):
         if not user:
             return {"message": "User not found"}, 403
         # user's all contacts should also be deleted
-        contacts = Contact.query.filter_by(user_id = user_id).all()
+        contacts = Contact.query.filter_by(user_id=user_id).all()
         if contacts and len(contacts) > 0:
             db.session.delete(contacts)
 
         db.session.delete(user)
         db.session.commit()
-        return jsonify({"message": f"Successfully deleted user with {user_id}"}), 200 
+        return jsonify({"message": f"Successfully deleted user with {user_id}"}), 200
 
     except Exception as ex:
         logging.exception(ex)
-        return jsonify({"message": "Server crashed"}), 500 
+        return jsonify({"message": "Server crashed"}), 500
 
 
 @app.route("/api/v1/users/auth", methods=["POST"])
@@ -84,17 +88,18 @@ def authenticate_user():
             user_schema: Dict = AuthUserSchema().load(body)
             username = user_schema["username"]
             password = user_schema["password"]
-            
-            usr: User = User.query.filter_by(username = username).first()
+
+            usr: User = User.query.filter_by(username=username).first()
             if not usr:
                 return jsonify({"message": "User not found"}), 404
-            
+
             authenticated = validate_password_hash(password, usr.password)
             if not authenticated:
                 return jsonify({"message": "Invalid user credentials"}), 403
 
-            access_token, expiresOn = generate_jwt(username, datetime.timedelta(hours=24)) 
-            return jsonify({"accessToken": f"Bearer {access_token}", "expiresOn": str(expiresOn.timestamp())})
+            access_token, expiresOn = generate_jwt(
+                username, datetime.timedelta(hours=24))
+            return jsonify({"accessToken": f"Bearer {access_token}", "expiresOn": str(expiresOn.timestamp()), "user": UserSchema().dump(usr)})
 
         except Exception as ex:
             logging.error("Operation failed")
@@ -119,7 +124,12 @@ def register_user():
             db.session.add(user)
             db.session.commit()
 
-            return UserSchema().dump(user)
+            access_token, expiresOn = generate_jwt(
+                username, datetime.timedelta(hours=24))
+            return jsonify({"accessToken": f"Bearer {access_token}", \
+                            "expiresOn": str(expiresOn.timestamp()), \
+                            "user": UserSchema().dump(user)})
+
         except Exception as ex:
             print(ex)
             if isinstance(ex, ValidationError):

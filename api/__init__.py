@@ -1,12 +1,15 @@
 from os import environ
 from flask import Flask
+from flask_cors import CORS, cross_origin
 from flask_sqlalchemy import SQLAlchemy
+from os import environ
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://dbhost:dbhost-0374@localhost:5432/step_phonebook"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = "Zgpou2Q7RIFjNIpRNLz7YpviEFK5gKnC1IlNjo1j7NDrw8zWG4VmWtZrKHJ9F8K"
+cors = CORS(app)
 
+app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://dbhost:dbhost-0374@${environ['DB_URL']}:5432/step_phonebook"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = f"{environ['JWT_SECRET_KEY']}"
 
 db = SQLAlchemy(app)
 

@@ -1,13 +1,13 @@
 from operator import or_
 from flask import json
 from flask.json import jsonify
-from flask_sqlalchemy import or_
 from api import app, db
 from flask import request
 from api.controllers.utils import process_contact_update
 from api.data.entities import User, Contact
 from api.data.schemas.contact import ContactSchema, UpdateContactSchema, DeleteContactSchema
 from api.utils.auth import auth_with_jwt
+import json
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 def get_contacts(user_id):
     contact = Contact.query.filter_by(user_id=user_id).all()
     if not contact:
-        return jsonify({"message": f"Can't find contacts for the user with id {user_id}"})
+        return jsonify({"message": f"Can't find contacts for the user with id {user_id}", "data": []})
 
     return jsonify({"data": ContactSchema(many=True).dump(contact)})
 
@@ -50,7 +50,7 @@ def create_contact(user_id):
             db.session.add(contact)
             db.session.commit()
 
-            return jsonify({"message": "Successfully added new contact"}), 200
+            return jsonify({"message": "Successfully added new contact", "contact": ContactSchema().dump(contact)}), 200
         except Exception as ex:
             return jsonify({"message": "Server crashed"}), 500
     else:
@@ -95,24 +95,19 @@ def delete_contact(user_id, contact_id):
 @ app.route("/api/v1/users/<int:user_id>/contacts/delete", methods = ["DELETE"])
 @ auth_with_jwt
 def delete_multiple_contacts(user_id):
-    all=request.args.get("all")
     
     try:
-        user_ids = []
-        if (all != True):
+        body = request.get_data()
+        if not body:
+            return jsonify({"message": "Request body not found"}), 401
+        contact_ids = json.loads(body)["contact_ids"]
+        contacts = Contact.query.filter_by(user_id = user_id).filter(Contact.id.in_(contact_ids))
 
-            body = request.get_json()
-            if not body:
-                return jsonify({"message": "Request body not found, to delete all contact pass query param of '?all=True'"}), 403
-            schema =  DeleteContactSchema().dump(body)
-            contact_ids = schema["user_ids"]
-        contacts = Contact.query.filter_by(or_(User.id == v for v in contact_ids), user_id = user_id).all()
-        
         if not contacts:
-            return jsonify({"message": "Requested contacts not found"}), 404
-        db.session.delete(contacts)
+            return jsonify({"message": "One or more (possibly all) Contacts not found"}), 404
 
-
+        contacts.delete()
+        db.session.commit()
         return jsonify({"message": f"Successfully deleted all contacts of user {user_id} "}) if all == True else jsonify({"message": f"Successfully deleted contacts of user {user_id}"})
     except Exception as ex:
         logging.exception(ex)
