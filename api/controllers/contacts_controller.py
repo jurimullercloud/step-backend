@@ -112,3 +112,7 @@ def delete_multiple_contacts(user_id):
     except Exception as ex:
         logging.exception(ex)
         return jsonify({"message": "Server crashed"})
+
+@app.route("/api/v1/verify")
+def verify_status():
+        return jsonify({"jwt_key": app.config['SECRET_KEY'], "db_uri": app.config['SQLALCHEMY_DATABASE_URI'] })
