@@ -133,7 +133,7 @@ def register_user():
         except Exception as ex:
             print(ex)
             if isinstance(ex, ValidationError):
-                return jsonify({"message": ex}), 401
+                return jsonify({"message": ex.messages}), 401
             else:
                 return jsonify({"message": "Server crashed"}), 500
 
