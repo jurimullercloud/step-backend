@@ -3,6 +3,7 @@ import datetime
 from flask import request, jsonify
 from marshmallow.exceptions import ValidationError
 from api import app, db
+from api.services import UserService
 from api.data.entities import User, Contact
 from api.data.schemas.user import UpdateUserSchema, UserSchema, AuthUserSchema
 from api.utils.auth import auth_with_jwt, generate_jwt, generate_password_hash, validate_password_hash
@@ -10,12 +11,13 @@ from api.controllers.utils import process_user_update
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+service = UserService(session=db.session, user=User)
 
 @app.route("/api/v1/users", methods=["GET"])
 @auth_with_jwt
 def get_all_users():
     try:
-        users = User.query.all()
+        users = service.get_all()
         schema = UserSchema(many=True)
         return jsonify({"data": schema.dump(users)})
     except Exception as ex:
@@ -27,7 +29,7 @@ def get_all_users():
 @auth_with_jwt
 def get_user(user_id):
     try:
-        user = User.query.filter_by(id=user_id).first()
+        user = service.get_by_id(_id = user_id)
         schema = UserSchema()
         return schema.dump(user)
     except Exception as ex:
@@ -39,7 +41,7 @@ def get_user(user_id):
 @auth_with_jwt
 def update_user(user_id):
     try:
-        user = User.query.filter_by(id=user_id).first()
+        user = service.get_by_id(user_id)
 
         if not user:
             return jsonify({"message": "User not found"}), 404
@@ -49,8 +51,7 @@ def update_user(user_id):
             return jsonify({"message": "Found empty request body"}), 401
 
         schema: Dict = UpdateUserSchema().load(body)
-        user = process_user_update(schema, user)
-        db.session.commit()
+        user = service.update(schema)
 
         return UserSchema().dump(user)
     except Exception as ex:
@@ -62,7 +63,7 @@ def update_user(user_id):
 @auth_with_jwt
 def delete_user(user_id):
     try:
-        user: User = User.query.filter_by(id=user_id).first()
+        user: User = service.get_by_id(user_id) 
 
         if not user:
             return {"message": "User not found"}, 403
@@ -71,8 +72,7 @@ def delete_user(user_id):
         if contacts and len(contacts) > 0:
             db.session.delete(contacts)
 
-        db.session.delete(user)
-        db.session.commit()
+        service.delete(user)
         return jsonify({"message": f"Successfully deleted user with {user_id}"}), 200
 
     except Exception as ex:
@@ -121,9 +121,7 @@ def register_user():
 
             user = User(username, password_hash)
 
-            db.session.add(user)
-            db.session.commit()
-
+            service.create(user)
             access_token, expiresOn = generate_jwt(
                 username, datetime.timedelta(hours=24))
             return jsonify({"accessToken": f"Bearer {access_token}", \
