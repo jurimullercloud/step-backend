@@ -3,7 +3,7 @@ import datetime
 from flask import request, jsonify
 from marshmallow.exceptions import ValidationError
 from api import app, db
-from api.services import UserService
+from api.services import userService as service
 from api.data.entities import User, Contact
 from api.data.schemas.user import UpdateUserSchema, UserSchema, AuthUserSchema
 from api.utils.auth import auth_with_jwt, generate_jwt, generate_password_hash, validate_password_hash
@@ -11,7 +11,8 @@ from api.controllers.utils import process_user_update
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-service = UserService(session=db.session, user=User)
+
+
 
 @app.route("/api/v1/users", methods=["GET"])
 @auth_with_jwt
@@ -121,7 +122,8 @@ def register_user():
 
             user = User(username, password_hash)
 
-            service.create(user)
+            user = service.create(user)
+
             access_token, expiresOn = generate_jwt(
                 username, datetime.timedelta(hours=24))
             return jsonify({"accessToken": f"Bearer {access_token}", \

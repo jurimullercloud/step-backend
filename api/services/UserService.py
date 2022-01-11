@@ -1,4 +1,5 @@
 from typing import List, Dict
+from api import db
 from api.data.entities import User
 from api.data.schemas import UserSchema, AuthUserSchema, UpdateUserSchema
 from api.utils.auth import generate_password_hash
@@ -34,3 +35,6 @@ class UserService:
     def delete(self, user: User) -> int:
         self._session.delete(user) 
         self._session.commit()
+
+
+userService = UserService(db.session, User)
