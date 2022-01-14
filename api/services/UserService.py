@@ -16,8 +16,13 @@ class UserService:
 
         return user
     
+
+    def get_by_filter(self, first = False, **kwargs):
+        res = self._user.query.filter_by(**kwargs) 
+        return res if not first else res.first()
+
     def get_by_id(self, _id: any) -> User:
-        return self._user.query.filter_by(id=_id).first()
+        return self.get_by_filter(first=True, id=_id)
 
     def get_all(self) -> List[User]:
         return self._user.query.all()

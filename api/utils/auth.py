@@ -22,7 +22,7 @@ def auth_with_jwt(f):
         except Exception as ex:
             print(ex)
             print(ex.__traceback__)
-            return jsonify({"message": "Invalid token"}) 
+            return jsonify({"message": "Invalid token"}), 401
 
         return f(*args, **kwargs)         
 

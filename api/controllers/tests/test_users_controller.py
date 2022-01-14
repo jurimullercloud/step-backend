@@ -1,86 +1,159 @@
+from typing import Dict
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import json
 from api import app
-# from api.services import userService as service
 from api.data.entities import User
+from api.utils.auth import generate_password_hash
 from hamcrest import assert_that, equal_to, has_key
 
 
-class BaseUsersControllerTest(unittest.TestCase):
+class BaseUsersControllerTest:
 
-    def __init__(self, endpoint, *args, **kwargs):
-        super(BaseUsersControllerTest, self).__init__(*args, **kwargs)
-        self.ADDRESS = f"/api/v1/users/{endpoint}"
+    def __init__(self, to):
+        self.to = to
+        self.ROUTE = "/api/v1/users" + to
+        self.mock_user_login_data = {
+            "username": "mock_username",
+            "password": "mock_password"
+        }
 
-        print(self.ADDRESS)
-    def post(self, address, body):
+    def post(self, address, body, headers: Dict = None):
         with(app.test_client(self) as c):
-            return c.post(address, data=json.dumps(body), content_type="application/json")
+            return c.post(address, data=json.dumps(body),
+                          content_type="application/json",
+                          headers=headers)
+
+    def put(self, address, body, headers: Dict = None):
+        with(app.test_client(self) as c):
+            return c.put(address,
+                        data=json.dumps(body),
+                        content_type="application/json",
+                        headers=headers)
+
+    def get(self, address, headers: Dict = None):
+        with (app.test_client(self) as c):
+            return c.get(address,headers=headers)
+
+    def delete(self, address, headers: Dict = None):
+        with (app.test_client(self) as c):
+            return c.delete(address, headers=headers)
+
+    def _is_no_request_body_testable(self):
+        return self.to == "/register" \
+            or self.to == "/auth"
+
+    def _is_username_password_testable(self):
+        return self.to == "/register" \
+            or self.to == "/auth"
+
+    def _get_http_response(self, route, method: str, body: Dict = None, headers: Dict = None):
+
+        if (method == "PUT"):
+            response = self.put(route, body = body, headers=headers)  # sending empty body
+        elif (method == "GET"):
+            response = self.get(self.ROUTE, headers=headers)
+        elif (method == "DELETE"):
+            response = self.delete(self.ROUTE, headers=headers)
+        else:
+            response = self.post(self.ROUTE, body = body, headers=headers) 
+
+        return response
 
     def test_response_when_no_request_body(self):
-        route = self.ADDRESS
-        data = {}
-        response = self.post(route, data)
-        body = response.get_json()
+        if (self._is_no_request_body_testable()):
+            data = {}
+            response = self.post(self.ROUTE, data)
+            body = response.get_json()
 
-        assert_that(response.status_code, equal_to(406))
-        assert_that(body["message"], equal_to("Request body was not found"))
-
-class RegisterUsersTest(BaseUsersControllerTest):
-    
-    def __init__(self, *args, **kwargs):
-        super(RegisterUsersTest, self).__init__("register", *args, **kwargs)
-        self.BASE_ROUTE = self.ADDRESS
-    
-    # def test_response_when_no_request_body(self):
-    #     route = self.BASE_ROUTE
-    #     data = {}
-    #     response = self.post(route, data)
-    #     body = response.get_json()
-
-    #     assert_that(response.status_code, equal_to(406))
-    #     assert_that(body["message"], equal_to("Request body was not found"))
+            assert_that(response.status_code, equal_to(406))
+            assert_that(body["message"], equal_to(
+                "Request body was not found"))
+        else:
+            self.skipTest("Skipping no request body test")
 
     def test_response_when_username_missing(self):
-        route = self.BASE_ROUTE 
-        data = {
-            "password": "TEST"
-        }
+        if self._is_username_password_testable():
+            data = {
+                "password": self.mock_user_login_data["password"]
+            }
 
-        response = self.post(route, data)
-        body = response.get_json()
+            response = self.post(self.ROUTE, data)
+            body = response.get_json()
 
-        assert_that(response.status_code, equal_to(401))
-        assert_that(body["message"]["username"][0],
-                    equal_to("Username is required"))
+            assert_that(response.status_code, equal_to(401))
+            assert_that(body["message"]["username"][0],
+                        equal_to("Username is required"))
+        else:
+            self.skipTest("Skipping username validation Test")
 
     def test_response_when_password_missing(self):
-        route = self.BASE_ROUTE
-        data = {
-            "username": "TEST"
-        }
 
-        response = self.post(route, data)
+        if self._is_username_password_testable():
+            data = {
+                "username": self.mock_user_login_data["username"]
+            }
+
+            response = self.post(self.ROUTE, data)
+            body = response.get_json()
+
+            assert_that(response.status_code, equal_to(401))
+            assert_that(body["message"]["password"][0],
+                        equal_to("Password is required"))
+        else:
+            self.skipTest("Skipping password validation Test")
+
+    def when_no_auth_token_present(self, method: str):
+
+        response = self._get_http_response(method, self.ROUTE, body = {}, headers = None) 
         body = response.get_json()
 
+        assert_that(response.status_code, equal_to(400))
+        assert_that(body["message"], equal_to(
+            "Authorization header not found"))
+
+    @patch("api.utils.auth.jwt")
+    def when_auth_token_is_invalid(self, method, jwt_mock):
+
+        jwt_mock.decode.side_effect = Exception("Invalid token")
+        mock_token = "Beaer mocktoken"
+        response = self._get_http_response(method, self.ROUTE, body = {}, headers={"Authorization": mock_token})
+        body = response.get_json()
         assert_that(response.status_code, equal_to(401))
-        assert_that(body["message"]["password"][0],
-                    equal_to("Password is required"))
+        assert_that(body["message"], "Invalid token")
+    
+    @patch("api.controllers.users_controller.service")
+    @patch("api.utils.auth.jwt")
+    def when_no_user_found(self, method, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
+
+        service.get_by_id.return_value = None
+
+        response = self._get_http_response(method, 
+                            self.ROUTE,
+                            body=self.mock_user_login_data,
+                            headers={"Authorization": mock_token})
+        body = response.get_json()
+
+        assert_that(response.status_code, equal_to(404))
+        assert_that(body["message"], equal_to("User not found"))
+
+class RegisterUsersTest(unittest.TestCase, BaseUsersControllerTest):
+
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        BaseUsersControllerTest.__init__(self, to="/register")
 
     @patch("api.controllers.users_controller.service")
     def test_response_when_ok(self, service):
 
-        mock_data = {
-            "username": "mock_username",
-            "password": "mock_password"
-        }
-        mock_user = User(mock_data["username"], mock_data["password"])
+        mock_user = User(self.mock_user_login_data["username"],
+                         self.mock_user_login_data["password"])
 
         service.create(mock_user).return_value = mock_user
 
-        route = self.BASE_ROUTE
-        response = self.post(route, mock_data)
+        response = self.post(self.ROUTE, self.mock_user_login_data)
         body = response.get_json()
 
         expected_response_keys = ["accessToken", "expiresOn", "user"]
@@ -90,27 +163,145 @@ class RegisterUsersTest(BaseUsersControllerTest):
             assert_that(body, has_key(key))
 
 
-# class AuthenticateUsersTest(unittest.TestCase):
-#     def __init__(self, *args, **kwargs):
-#         super(AuthenticateUsersTest, self).__init__(*args, **kwargs)
-#         self.BASE_ROUTE = self.ADDRESS + "/auth"
+class AuthenticateUsersTest(unittest.TestCase, BaseUsersControllerTest):
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        BaseUsersControllerTest.__init__(self, to="/auth")
+
+    @patch("api.controllers.users_controller.service")
+    def test_response_when_no_user_found(self, service):
+        service.get_by_filter.return_value = None
+
+        response = self.post(self.ROUTE, self.mock_user_login_data)
+        body = response.get_json()
+        assert_that(response.status_code, equal_to(404))
+        assert_that(body["message"], equal_to("User not found"))
+
+    @patch("api.controllers.users_controller.service")
+    def test_response_when_no_password_match(self, service):
+        username = self.mock_user_login_data["username"]
+        wrong_password = "wrong_password"
+        actual_password_hash = generate_password_hash(
+            self.mock_user_login_data["password"])
+
+        service.get_by_filter.return_value = User(username=username,
+                                                  password=actual_password_hash)
+        data = {
+            "username": username,
+            "password": wrong_password
+        }
+
+        response = self.post(self.ROUTE, body=data)
+        body = response.get_json()
+
+        assert_that(response.status_code, equal_to(403))
+        assert_that(body["message"], "Invalid user credentials")
+
+    @patch("api.controllers.users_controller.service")
+    def test_response_when_user_authenticated(self, service):
+        username = self.mock_user_login_data["username"]
+        password = self.mock_user_login_data["password"]
+
+        actual_password_hash = generate_password_hash(password)
+        service.get_by_filter.return_value = User(username=username,
+                                                  password=actual_password_hash)
+
+        response = self.post(self.ROUTE, body=self.mock_user_login_data)
+        body = response.get_json()
+
+        assert_that(response.status_code, equal_to(200))
+        expected_response_keys = ["accessToken", "expiresOn", "user"]
+
+        for key in expected_response_keys:
+            assert_that(body, has_key(key))
+        assert_that(body["user"]["username"], equal_to(username))
+
+
+class UpdateUserTest(unittest.TestCase, BaseUsersControllerTest):
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        BaseUsersControllerTest.__init__(self, to="/12")
+
+    def test_when_no_auth_token_present(self):
+        self.when_no_auth_token_present("PUT")
+
+    def test_when_auth_token_is_invalid(self):
+        self.when_auth_token_is_invalid("PUT")
+
+    
+    def test_when_no_user_found(self):
+        self.when_no_user_found("PUT") 
+
+    @patch("api.controllers.users_controller.service")
+    @patch("api.utils.auth.jwt")
+    def test_when_no_request_body(self, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
+
+        service.get_by_id.return_value = User(username=self.mock_user_login_data["username"],
+                                              password=self.mock_user_login_data["password"])
+
+        response = self.put(self.ROUTE,
+                            body={},
+                            headers={"Authorization": mock_token})
+
+        body = response.get_json()
+        assert_that(response.status_code, equal_to(400))
+        assert_that(body["message"], "Found empty request body")
+
+    @patch("api.controllers.users_controller.service")
+    @patch("api.utils.auth.jwt")
+    def test_when_update_ok(self, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
+
+        service.get_by_id.return_value = User(
+            username=self.mock_user_login_data["username"],
+            password=self.mock_user_login_data["password"])
+
+        data = {
+            "username": self.mock_user_login_data["username"],
+            "password": "Changed Password"
+        }
+
+        changed_password_hash = generate_password_hash(data["password"])
+        service.update.return_value = User(username=data["username"],
+                                           password=changed_password_hash)
+
+        response = self.put(self.ROUTE,
+                            body=self.mock_user_login_data,
+                            headers={"Authorization": mock_token})
+        body = response.get_json()
+
+        assert_that(response.status_code, equal_to(200))
+        assert_that(body["message"], "Update is successful")
+        assert_that(body["user"]["username"], data["username"])
+
+
+class GetUserTest(unittest.TestCase, BaseUsersControllerTest):
+    
+
+    def __init__(self,*args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        BaseUsersControllerTest.__init__(self, to = "/12")
+
+    def test_when_no_auth_token_present(self):
+        self.when_no_auth_token_present("GET")
+
+    def test_when_auth_token_is_invalid(self):
+        self.when_auth_token_is_invalid("GET")
+
+    def test_when_no_user_found(self):
+        pass
+
+    
+
+
+# class DeleteUserTest(unittest.TestCase):
+#     pass
 
 
 
-class DeleteUsersTest(unittest.TestCase):
-    pass
-
-
-class UpdateUserTest(unittest.TestCase):
-    pass
-
-
-class GetUserTest(unittest.TestCase):
-    pass
-
-
-class GetAllUsersTest(unittest.TestCase):
-    pass
 
 
 def run():

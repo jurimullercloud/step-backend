@@ -31,8 +31,13 @@ def get_all_users():
 def get_user(user_id):
     try:
         user = service.get_by_id(_id = user_id)
+
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
         schema = UserSchema()
-        return schema.dump(user)
+        return jsonify({"message": "Get user successful", "user": schema.dump(user)}), 200
+        
     except Exception as ex:
         logging.exception(ex)
         return jsonify({"message": "Server crashed"}), 500
@@ -43,18 +48,17 @@ def get_user(user_id):
 def update_user(user_id):
     try:
         user = service.get_by_id(user_id)
-
+        
         if not user:
             return jsonify({"message": "User not found"}), 404
 
         body = request.get_json()
         if not body:
-            return jsonify({"message": "Found empty request body"}), 401
-
+            return jsonify({"message": "Found empty request body"}), 400
         schema: Dict = UpdateUserSchema().load(body)
         user = service.update(schema)
+        return jsonify({"message": "Update is successful", "user": UserSchema().dump(user)}), 200
 
-        return UserSchema().dump(user)
     except Exception as ex:
         logging.exception(ex)
         return {"message": "Server crashed"}, 500
@@ -90,7 +94,8 @@ def authenticate_user():
             username = user_schema["username"]
             password = user_schema["password"]
 
-            usr: User = User.query.filter_by(username=username).first()
+            usr: User = service.get_by_filter(first = True, username=username)
+
             if not usr:
                 return jsonify({"message": "User not found"}), 404
 
@@ -103,8 +108,10 @@ def authenticate_user():
             return jsonify({"accessToken": f"Bearer {access_token}", "expiresOn": str(expiresOn.timestamp()), "user": UserSchema().dump(usr)})
 
         except Exception as ex:
-            logging.error("Operation failed")
             logging.error(ex)
+
+            if isinstance(ex, ValidationError):
+                return jsonify({"message": ex.messages}), 401
             return jsonify({"message": "Server crashed"}), 500
     else:
         return jsonify({"message": "Request body was not found"}), 406
@@ -131,7 +138,7 @@ def register_user():
                             "user": UserSchema().dump(user)})
 
         except Exception as ex:
-            print(ex)
+            logging.error(ex)
             if isinstance(ex, ValidationError):
                 return jsonify({"message": ex.messages}), 401
             else:
