@@ -48,7 +48,7 @@ class BaseUsersControllerTest:
             or self.to == "/auth"
 
     def _get_http_response(self, route, method: str, body: Dict = None, headers: Dict = None):
-
+        
         if (method == "PUT"):
             response = self.put(route, body = body, headers=headers)  # sending empty body
         elif (method == "GET"):
@@ -105,7 +105,7 @@ class BaseUsersControllerTest:
 
     def when_no_auth_token_present(self, method: str):
 
-        response = self._get_http_response(method, self.ROUTE, body = {}, headers = None) 
+        response = self._get_http_response(self.ROUTE, method, body = {}, headers = None) 
         body = response.get_json()
 
         assert_that(response.status_code, equal_to(400))
@@ -117,7 +117,7 @@ class BaseUsersControllerTest:
 
         jwt_mock.decode.side_effect = Exception("Invalid token")
         mock_token = "Beaer mocktoken"
-        response = self._get_http_response(method, self.ROUTE, body = {}, headers={"Authorization": mock_token})
+        response = self._get_http_response(self.ROUTE, method, body = {}, headers={"Authorization": mock_token})
         body = response.get_json()
         assert_that(response.status_code, equal_to(401))
         assert_that(body["message"], "Invalid token")
@@ -130,8 +130,8 @@ class BaseUsersControllerTest:
 
         service.get_by_id.return_value = None
 
-        response = self._get_http_response(method, 
-                            self.ROUTE,
+        response = self._get_http_response(self.ROUTE,
+                            method,
                             body=self.mock_user_login_data,
                             headers={"Authorization": mock_token})
         body = response.get_json()
@@ -292,16 +292,26 @@ class GetUserTest(unittest.TestCase, BaseUsersControllerTest):
         self.when_auth_token_is_invalid("GET")
 
     def test_when_no_user_found(self):
-        pass
-
-    
+        self.when_no_user_found("GET")
 
 
-# class DeleteUserTest(unittest.TestCase):
-#     pass
+    @patch("api.controllers.users_controller.service")
+    @patch("api.utils.auth.jwt")
+    def test_response_when_ok(self, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
+
+        mock_password_hash = generate_password_hash(self.mock_user_login_data["password"])
+        service.get_by_id.return_value = User(username=self.mock_user_login_data["username"],
+                                              password=mock_password_hash)
+
+        response = self._get_http_response(self.ROUTE, "GET",
+                                            headers={"Authorization": mock_token})             
+        body = response.get_json()
 
 
-
+        assert_that(response.status_code, equal_to(200))
+        assert_that(body["message"], "Get user successful")
 
 
 def run():
