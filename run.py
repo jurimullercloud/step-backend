@@ -1,6 +1,5 @@
-from api import app, tests
+from api import app
 
 if (__name__ == "__main__"):
-    tests.run()
-    # app.run()
+    app.run()
     print("App is running")

@@ -19,24 +19,24 @@ class BaseUsersControllerTest:
         }
 
     def post(self, address, body, headers: Dict = None):
-        with(app.test_client(self) as c):
+        with app.test_client(self) as c:
             return c.post(address, data=json.dumps(body),
                           content_type="application/json",
                           headers=headers)
 
     def put(self, address, body, headers: Dict = None):
-        with(app.test_client(self) as c):
+        with app.test_client(self) as c:
             return c.put(address,
                         data=json.dumps(body),
                         content_type="application/json",
                         headers=headers)
 
     def get(self, address, headers: Dict = None):
-        with (app.test_client(self) as c):
+        with app.test_client(self) as c:
             return c.get(address,headers=headers)
 
     def delete(self, address, headers: Dict = None):
-        with (app.test_client(self) as c):
+        with app.test_client(self) as c:
             return c.delete(address, headers=headers)
 
     def _is_no_request_body_testable(self):
