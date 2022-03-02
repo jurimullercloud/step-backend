@@ -26,7 +26,7 @@ pipeline {
 
         stage ("Build Docker Image") {
             steps {
-                sh 'docker build -t ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG}'
+                sh 'docker build -t ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG} .'
             }
         }
 
