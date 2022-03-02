@@ -9,8 +9,8 @@ from api.data.schemas.contact import ContactSchema, UpdateContactSchema, DeleteC
 from api.utils.auth import auth_with_jwt
 import json
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route("/api/v1/users/<int:user_id>/contacts/list", methods=["GET"])
 @auth_with_jwt
@@ -90,6 +90,9 @@ def delete_contact(user_id, contact_id):
     except Exception as ex:
         logging.exception(ex)
         return jsonify({"message": "Server crashed"}), 500
+
+
+
 
 
 @ app.route("/api/v1/users/<int:user_id>/contacts/delete", methods = ["DELETE"])

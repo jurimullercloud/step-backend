@@ -1,0 +1,16 @@
+FROM postgres:14.2-bullseye
+
+ENV POSTGRES_USER="local_user"
+ENV POSTGRES_PASSWORD="local_password"
+ENV POSTGRES_DB="local_db"
+
+# Install Python
+RUN apt update -y
+RUN apt install python3 -y
+RUN apt install python3-pip -y
+RUN apt install libpq-dev python3-dev
+
+WORKDIR /setups
+COPY . .
+RUN pip3 install -r requirements.txt
+RUN python3 init_database.py
