@@ -6,7 +6,7 @@ from api import app
 from api.data.entities import User
 from api.utils.auth import generate_password_hash
 from hamcrest import assert_that, equal_to, has_key
-
+import logging
 
 class BaseUsersControllerTest:
 
@@ -146,7 +146,10 @@ class RegisterUsersTest(unittest.TestCase, BaseUsersControllerTest):
         BaseUsersControllerTest.__init__(self, to="/register")
 
     @patch("api.controllers.users_controller.service")
-    def test_response_when_ok(self, service):
+    @patch("api.utils.auth.jwt")
+    def test_response_when_ok(self, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
 
         mock_user = User(self.mock_user_login_data["username"],
                          self.mock_user_login_data["password"])
@@ -198,7 +201,12 @@ class AuthenticateUsersTest(unittest.TestCase, BaseUsersControllerTest):
         assert_that(body["message"], "Invalid user credentials")
 
     @patch("api.controllers.users_controller.service")
-    def test_response_when_user_authenticated(self, service):
+    @patch("api.utils.auth.jwt")
+    def test_response_when_user_authenticated(self, jwt_mock, service):
+        jwt_mock.decode.return_value = {}
+        mock_token = "Bearer mocktoken"
+
+
         username = self.mock_user_login_data["username"]
         password = self.mock_user_login_data["password"]
 
@@ -209,6 +217,8 @@ class AuthenticateUsersTest(unittest.TestCase, BaseUsersControllerTest):
         response = self.post(self.ROUTE, body=self.mock_user_login_data)
         body = response.get_json()
 
+
+        logging.info(body) 
         assert_that(response.status_code, equal_to(200))
         expected_response_keys = ["accessToken", "expiresOn", "user"]
 
