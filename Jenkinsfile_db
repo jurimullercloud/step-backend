@@ -5,21 +5,23 @@ pipeline {
         DOCKERHUB_CREDENTIALS=credentials('dockerhub-access')
     }
 
-    stage ("Build Docker Image") {
-        steps {
-            sh 'docker build -t ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG}'
+    stages {
+        stage ("Build Docker Image") {
+            steps {
+                sh 'docker build -t ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG}'
+            }
         }
-    }
 
-    stage ("Login to Dockerhub") {
-        steps {
-            sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
+        stage ("Login to Dockerhub") {
+            steps {
+                sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
+            }
         }
-    }
 
-    stage ("Push new Image to Dockerhub") {
-        steps {
-            sh 'docker push ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG}'
+        stage ("Push new Image to Dockerhub") {
+            steps {
+                sh 'docker push ${REGISTRY_NAME}/${IMAGE_NAME}:${IMAGE_TAG}'
+            }
         }
     }
 }
