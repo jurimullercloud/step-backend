@@ -13,7 +13,7 @@ POSTGRES_DB = os.environ["POSTGRES_DB"]
 RUNNING_ENV = os.environ["RUNNING ENV"]
 DB_SERVICE_NAME = os.environ.get("DB_SERVICE_NAME")
 
-HOST = os.environ.get(f"{DB_SERVICE_NAME}_SERVICE_HOST") if DB_SERVICE_NAME is not None else "localhost"
+HOST = os.environ.get(f"{DB_SERVICE_NAME.upper()}_SERVICE_HOST") if DB_SERVICE_NAME is not None else "localhost"
 
 DB_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{HOST}:5432/{POSTGRES_DB}"
 
