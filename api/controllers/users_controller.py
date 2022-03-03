@@ -56,7 +56,10 @@ def update_user(user_id):
         if not body:
             return jsonify({"message": "Found empty request body"}), 400
         schema: Dict = UpdateUserSchema().load(body)
-        user = service.update(schema)
+        user = service.update(user, schema)
+        print(user.username)
+        print(user.id)
+
         return jsonify({"message": "Update is successful", "user": UserSchema().dump(user)}), 200
 
     except Exception as ex:

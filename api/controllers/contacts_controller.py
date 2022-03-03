@@ -82,9 +82,10 @@ def update_contact(user_id, contact_id):
 @auth_with_jwt
 def delete_contact(user_id, contact_id):
     try:
-        contacts = Contact.query.filter_by(user_id=user_id, id=contact_id).delete()
-        if not contacts:
-            return f"Contact with id {contact_id} not found", 
+        contacts = Contact.query.filter_by(user_id=user_id, id=contact_id)
+        res = contacts.delete()
+        if res == 0:
+            return f"Contact with id {contact_id} and user id {user_id} not found",
         db.session.commit()
         return jsonify({"message": f"Succesfully deleted contact with id {contact_id}"}), 200
     except Exception as ex:
@@ -98,18 +99,16 @@ def delete_contact(user_id, contact_id):
 @ app.route("/api/v1/users/<int:user_id>/contacts/delete", methods = ["DELETE"])
 @ auth_with_jwt
 def delete_multiple_contacts(user_id):
-    
     try:
         body = request.get_data()
         if not body:
             return jsonify({"message": "Request body not found"}), 401
         contact_ids = json.loads(body)["contact_ids"]
         contacts = Contact.query.filter_by(user_id = user_id).filter(Contact.id.in_(contact_ids))
+        res = contacts.delete()
+        if res == 0:
+            return jsonify({"message": f"One or more (possibly all) Contacts not found of user with id {user_id}"}), 404
 
-        if not contacts:
-            return jsonify({"message": "One or more (possibly all) Contacts not found"}), 404
-
-        contacts.delete()
         db.session.commit()
         return jsonify({"message": f"Successfully deleted all contacts of user {user_id} "}) if all == True else jsonify({"message": f"Successfully deleted contacts of user {user_id}"})
     except Exception as ex:

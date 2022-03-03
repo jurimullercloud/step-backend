@@ -27,15 +27,15 @@ class UserService:
     def get_all(self) -> List[User]:
         return self._user.query.all()
 
-    def update(self, schema: Dict) -> User:
+    def update(self, user: User, schema: Dict) -> User:
         if schema["username"]:
-            self._user.username = schema["username"]
+            user.username = schema["username"]
         if schema["password"]:
-            hash = generate_password_hash(schema["password"])
-            self._user.password = hash 
+            _hash = generate_password_hash(schema["password"])
+            user.password = _hash
 
         self._session.commit()
-        return self._user
+        return user
 
     def delete(self, user: User) -> int:
         self._session.delete(user) 
