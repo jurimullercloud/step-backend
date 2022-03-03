@@ -2,6 +2,7 @@ from os import environ
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+import socket
 import os
 
 app = Flask(__name__)
@@ -14,7 +15,7 @@ RUNNING_ENV = os.environ.get("RUNNING_ENV")
 DB_SERVICE_NAME = os.environ.get("DB_SERVICE_NAME")
 
 if RUNNING_ENV != "TEST":
-    HOST = os.environ.get(f"{DB_SERVICE_NAME.upper()}_SERVICE_HOST") if DB_SERVICE_NAME is not None else "localhost"
+    HOST = os.environ.get(f"{DB_SERVICE_NAME.upper()}_SERVICE_HOST") if DB_SERVICE_NAME is not None else socket.gethostbyname(socket.gethostname())
     DB_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{HOST}:5432/{POSTGRES_DB}"
 else:
     DB_URL = "TEST_URL"
