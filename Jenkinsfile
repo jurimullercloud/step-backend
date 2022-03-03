@@ -14,6 +14,9 @@ pipeline {
 
         stage ("Run Tests") {
             steps {
+                script {
+                    env.RUNNING_ENV = "TEST"
+                }
                 sh 'python3 run_tests.py'
             }
         }
