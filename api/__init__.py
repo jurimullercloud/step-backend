@@ -10,9 +10,10 @@ cors = CORS(app)
 POSTGRES_USER = os.environ["POSTGRES_USER"]
 POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 POSTGRES_DB = os.environ["POSTGRES_DB"]
-PG_HOST = os.environ.get("PG_HOST")
+RUNNING_ENV = os.environ["RUNNING ENV"]
+DB_SERVICE_NAME = os.environ.get("DB_SERVICE_NAME")
 
-HOST = PG_HOST if PG_HOST is not None else "localhost"
+HOST = os.environ.get(f"{DB_SERVICE_NAME}_SERVICE_HOST") if DB_SERVICE_NAME is not None else "localhost"
 
 DB_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{HOST}:5432/{POSTGRES_DB}"
 
