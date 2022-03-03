@@ -16,13 +16,10 @@ HOST = PG_HOST if PG_HOST is not None else "localhost"
 
 DB_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{HOST}:5432/{POSTGRES_DB}"
 
-
-# DB_URL = "postgresql://TESTUSER:TESTPassword@localhost:5432/local_db"
 app.config["SQLALCHEMY_DATABASE_URI"] = DB_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = environ.get("JWT_SECRET_KEY")
+app.config["SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
 
-app.config["SECRET_KEY"]="DEV KEY"
 db = SQLAlchemy(app)
 
 import api.controllers
