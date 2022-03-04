@@ -1,0 +1,12 @@
+FROM postgres:14.2-bullseye
+
+ENV POSTGRES_USER "local_user"
+ENV POSTGRES_PASSWORD "LocaluserPass12"
+ENV POSTGRES_DB "pba-db"
+
+# Install Python
+
+WORKDIR /setups
+COPY . .
+
+RUN mv init_database.sql /docker-entrypoint-initdb.d
