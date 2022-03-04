@@ -2,7 +2,6 @@ from os import environ
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-import socket
 import os
 
 app = Flask(__name__)
@@ -25,6 +24,5 @@ app.config["SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
 
 if RUNNING_ENV == "BACKEND" or RUNNING_ENV == "TEST":
     db = SQLAlchemy(app)
-
-import api.controllers
-from api.controllers import tests
+    import api.controllers
+    from api.controllers import tests
