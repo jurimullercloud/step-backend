@@ -23,7 +23,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DB_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
 
-if RUNNING_ENV == "BACKEND":
+if RUNNING_ENV == "BACKEND" or RUNNING_ENV == "TEST":
     db = SQLAlchemy(app)
 
 import api.controllers
