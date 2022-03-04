@@ -1,10 +1,13 @@
-from api import db
+from api import app
+from flask_sqlalchemy import SQLAlchemy
 
 if __name__ == "__main__":
     init_complete = False
 
     while not init_complete:
         try:
+            db = SQLAlchemy(app)
             db.create_all()
-        except Exception as ex:
-            print("Database has not found yet")
+            init_complete = True
+        except Exception as e:
+            print("Database has not been created yet")
